@@ -1,0 +1,49 @@
+:root {
+  --font-serif: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+
+  --color-ink: #242424;
+  --color-ink-muted: #6f6f6f;
+  --color-ink-soft: #8a8a8a;
+  --color-surface-input: #ffffff;
+  --color-border-input: #e4e2de;
+  --color-border-input-focus: #c9c5be;
+  --color-accent-orange: #f0a830;
+  --color-accent-orange-hover: #e39b22;
+  --color-link: #3f6f66;
+
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input {
+  font-family: inherit;
+}
