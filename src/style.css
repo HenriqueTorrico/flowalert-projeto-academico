@@ -9,7 +9,8 @@
   --color-border-input: #e4e2de;
   --color-border-input-focus: #c9c5be;
   --color-accent-orange: #f0a830;
-  --color-accent-orange-hover: #e39b22;
+  --color-accent-orange-hover: #d99218;
+  --color-accent-orange-active: #c98512;
   --color-link: #3f6f66;
 
   font-family: var(--font-sans);
