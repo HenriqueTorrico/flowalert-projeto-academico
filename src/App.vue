@@ -1,3 +1,7 @@
+<script setup>
+import { RouterView } from 'vue-router'
+</script>
+
 <template>
-  <p>FlowAlert</p>
+  <RouterView />
 </template>
