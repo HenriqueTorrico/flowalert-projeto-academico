@@ -1,7 +1,9 @@
 <script setup>
 import { RouterView } from 'vue-router'
+import AppToastHost from './components/ui/AppToastHost.vue'
 </script>
 
 <template>
   <RouterView />
+  <AppToastHost />
 </template>

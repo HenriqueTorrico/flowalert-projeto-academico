@@ -1,0 +1,63 @@
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    #eceae6 0%,
+    #f5f4f1 40%,
+    #eceae6 80%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+.skeleton--circle {
+  border-radius: 50%;
+}
+
+.skeleton--text {
+  height: 0.75rem;
+}
+
+.skeleton--title {
+  height: 1.1rem;
+  border-radius: 6px;
+}
+
+.skeleton--input {
+  height: 2.65rem;
+  border-radius: 10px;
+}
+
+.skeleton--label {
+  height: 0.65rem;
+  width: 5rem;
+  border-radius: 4px;
+}
+
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.skeleton-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.skeleton-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

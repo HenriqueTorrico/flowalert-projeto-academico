@@ -1,3 +1,6 @@
+@import './styles/buttons.css';
+@import './styles/skeleton.css';
+
 :root {
   --font-serif: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
   --font-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
@@ -47,4 +50,18 @@ a {
 button,
 input {
   font-family: inherit;
+}
+
+button,
+[type='button'],
+[type='submit'],
+[type='reset'],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+[type='button']:disabled,
+[type='submit']:disabled {
+  cursor: not-allowed;
 }

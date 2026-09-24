@@ -1,0 +1,250 @@
+.turmas-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+}
+
+.turmas-page-header__title {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.65rem, 2.2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1f1f1f;
+  letter-spacing: -0.02em;
+}
+
+.turmas-page-header__lead {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #7a7772;
+}
+
+.turmas-page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.class-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.05rem 0.95rem;
+  background: #fff;
+  border: 1px solid #ebe9e5;
+  border-radius: 12px;
+  border-top-width: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.class-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.class-card__share {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: -0.15rem -0.15rem 0 0;
+  padding: 0;
+  border: 1px solid #ebe9e5;
+  border-radius: 8px;
+  background: #fff;
+  color: #6b6760;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.class-card__share:hover {
+  background: #faf9f7;
+  border-color: #ddd9d3;
+  color: #3d3d3d;
+}
+
+.class-card--orange {
+  border-top-color: #e8a83a;
+}
+
+.class-card--green {
+  border-top-color: #5a9a7a;
+}
+
+.class-card--purple {
+  border-top-color: #8b6bb8;
+}
+
+.class-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: #6b6760;
+}
+
+.class-card__name {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #1f1f1f;
+}
+
+.class-card__meta {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  color: #8a8680;
+}
+
+.class-card__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.class-card__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.55rem 0.5rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #3d3d3d;
+  background: #fff;
+  border: 1px solid #e5e2dc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.class-card__action:hover {
+  background: #faf9f7;
+  border-color: #d8d4cd;
+}
+
+.class-card__action--primary {
+  grid-column: span 1;
+}
+
+.sent-panel {
+  padding: 1.15rem 1.25rem 0.35rem;
+  background: #fff;
+  border: 1px solid #ebe9e5;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.sent-panel__title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+.sent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sent-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.95rem 0;
+  border-top: 1px solid #efedea;
+}
+
+.sent-list__item:first-child {
+  border-top: none;
+  padding-top: 0.35rem;
+}
+
+.sent-list__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  margin-top: 0.1rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sent-list__icon--wine {
+  color: #8b4a5e;
+  background: #f8eef1;
+}
+
+.sent-list__icon--amber {
+  color: #b8862e;
+  background: #fdf6e8;
+}
+
+.sent-list__icon--slate {
+  color: #4a6278;
+  background: #eef2f6;
+}
+
+.sent-list__body {
+  min-width: 0;
+}
+
+.sent-list__title {
+  margin: 0 0 0.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2a2a2a;
+}
+
+.sent-list__text {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #7a7772;
+}
+
+@media (max-width: 1024px) {
+  .class-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .turmas-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .turmas-page-header__actions {
+    justify-content: flex-start;
+  }
+}
