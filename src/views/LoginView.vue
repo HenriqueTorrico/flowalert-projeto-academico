@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthHeroPanel from '../components/auth/AuthHeroPanel.vue'
+import AppActionButton from '../components/ui/AppActionButton.vue'
 import AppMessage from '../components/ui/AppMessage.vue'
 import { useAuthForm } from '../composables/useAuthForm'
 import { loginSchema } from '../schemas/loginSchema'
@@ -22,18 +23,23 @@ const { defineAuthField, handleSubmit, errors, submitCount } = useAuthForm({
 const [email, emailAttrs] = defineAuthField('email')
 const [password, passwordAttrs] = defineAuthField('password')
 
-const onSubmit = handleSubmit(async (values) => {
-    apiError.value = ''
+const runLogin = handleSubmit(async (values) => {
     submitting.value = true
     try {
         await loginRequest(values.email, values.password)
         await router.push({ name: 'dashboard' })
     } catch (err) {
-        apiError.value = err instanceof Error ? err.message : 'Não foi possível entrar.'
+        apiError.value =
+            err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.'
     } finally {
         submitting.value = false
     }
 })
+
+function onSubmit() {
+    apiError.value = ''
+    runLogin()
+}
 
 function showError(field) {
     return submitCount.value > 0 && errors.value[field]
@@ -77,9 +83,15 @@ function showError(field) {
                             </RouterLink>
                         </p>
                         <AppMessage v-if="apiError" severity="error" :message="apiError" />
-                        <button type="submit" form="login-form" class="btn-primary" :disabled="submitting">
-                            {{ submitting ? 'Entrando…' : 'Entrar' }}
-                        </button>
+                        <AppActionButton
+                            type="submit"
+                            form="login-form"
+                            variant="primary"
+                            :loading="submitting"
+                            loading-label="Entrando…"
+                        >
+                            Entrar
+                        </AppActionButton>
                     </div>
                 </div>
             </div>

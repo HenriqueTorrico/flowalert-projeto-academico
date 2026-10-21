@@ -1,7 +1,13 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { createInitialNotifications } from '../../data/mockNotifications'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { fetchAllAvisos } from '../../services/avisos'
+import { getStoredToken } from '../../services/auth'
 import { getInitials } from '../../utils/userDisplay'
+import {
+  getNotificationsReadAt,
+  mapAvisoToNotification,
+  markNotificationsReadAt,
+} from '../../utils/notificationHistory'
 import NotificationHistoryPopover from './NotificationHistoryPopover.vue'
 
 defineProps({
@@ -11,9 +17,31 @@ defineProps({
 
 const notificationsOpen = ref(false)
 const notifyRootRef = ref(null)
-const notifications = ref(createInitialNotifications())
+const avisos = ref([])
+const notificationsLoading = ref(false)
+const readAt = ref(getNotificationsReadAt())
+
+const notifications = computed(() =>
+  avisos.value.slice(0, 20).map((aviso) => mapAvisoToNotification(aviso, readAt.value)),
+)
 
 const hasUnread = computed(() => notifications.value.some((item) => item.unread))
+
+async function loadNotifications() {
+  if (!getStoredToken()) {
+    avisos.value = []
+    return
+  }
+
+  notificationsLoading.value = true
+  try {
+    avisos.value = await fetchAllAvisos()
+  } catch {
+    avisos.value = []
+  } finally {
+    notificationsLoading.value = false
+  }
+}
 
 function toggleNotifications() {
   notificationsOpen.value = !notificationsOpen.value
@@ -24,13 +52,16 @@ function closeNotifications() {
 }
 
 function markAllAsRead() {
-  notifications.value.forEach((item) => {
-    item.unread = false
-  })
+  const now = new Date()
+  readAt.value = now
+  markNotificationsReadAt(now)
 }
 
 watch(notificationsOpen, (isOpen) => {
-  if (isOpen) markAllAsRead()
+  if (isOpen) {
+    loadNotifications()
+    markAllAsRead()
+  }
 })
 
 function onDocumentPointerDown(event) {
@@ -51,6 +82,10 @@ watch(notificationsOpen, (isOpen) => {
     document.removeEventListener('pointerdown', onDocumentPointerDown)
     document.removeEventListener('keydown', onKeydown)
   }
+})
+
+onMounted(() => {
+  loadNotifications()
 })
 
 onBeforeUnmount(() => {
@@ -99,7 +134,11 @@ onBeforeUnmount(() => {
         </button>
 
         <Transition name="notify-pop">
-          <NotificationHistoryPopover v-if="notificationsOpen" :notifications="notifications" />
+          <NotificationHistoryPopover
+            v-if="notificationsOpen"
+            :notifications="notifications"
+            :loading="notificationsLoading"
+          />
         </Transition>
       </div>
 

@@ -1,11 +1,11 @@
 <template>
   <div class="dashboard-shell">
-    <DashboardSidebar :user-name="displayName" active-nav="home" />
+    <DashboardSidebar active-nav="home" />
 
     <div class="dashboard-main">
       <DashboardTopbar :user-name="displayName" />
 
-      <p v-if="loading" class="dashboard-loading">Carregando…</p>
+      <p v-if="pageLoading" class="dashboard-loading">Carregando…</p>
 
       <main v-else class="dashboard-content">
         <header class="dashboard-greeting">
@@ -17,22 +17,37 @@
 
         <section class="dashboard-stats" aria-label="Resumo">
           <article class="stat-card">
-            <span class="stat-card__label">Avisos enviados hoje</span>
-            <span class="stat-card__value stat-card__value--gold">4</span>
+            <span class="stat-card__label">Turmas cadastradas</span>
+            <span class="stat-card__value stat-card__value--purple">
+              {{ turmasCountDisplay }}
+            </span>
           </article>
           <article class="stat-card">
-            <span class="stat-card__label">Alunos notificados</span>
-            <span class="stat-card__value stat-card__value--teal">132</span>
+            <span class="stat-card__label">Avisos enviados hoje</span>
+            <span class="stat-card__value stat-card__value--gold">
+              {{ statDisplay(metrics.avisosToday) }}
+            </span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-card__label">Alunos nas turmas avisadas hoje</span>
+            <span class="stat-card__value stat-card__value--teal">
+              {{ statDisplay(metrics.studentsNotifiedToday) }}
+            </span>
           </article>
           <article class="stat-card">
             <span class="stat-card__label">Mudanças de sala esta semana</span>
-            <span class="stat-card__value stat-card__value--navy">2</span>
+            <span class="stat-card__value stat-card__value--navy">
+              {{ statDisplay(metrics.roomChangesThisWeek) }}
+            </span>
           </article>
         </section>
 
         <section class="recent-panel" aria-labelledby="recent-title">
           <h2 id="recent-title" class="recent-panel__title">Avisos recentes</h2>
-          <ul class="recent-list">
+          <p v-if="recentNotices.length === 0" class="recent-panel__empty">
+            Nenhum aviso enviado ainda. Crie um aviso em Turmas.
+          </p>
+          <ul v-else class="recent-list">
             <li v-for="item in recentNotices" :key="item.id" class="recent-list__item">
               <span class="recent-list__dot" :class="`recent-list__dot--${item.tone}`" aria-hidden="true" />
               {{ item.text }}
@@ -45,35 +60,79 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import DashboardSidebar from '../components/dashboard/DashboardSidebar.vue'
 import DashboardTopbar from '../components/dashboard/DashboardTopbar.vue'
 import { useRequireAuth } from '../composables/useRequireAuth'
+import { fetchAllAvisos } from '../services/avisos'
+import { fetchTurmas } from '../services/turmas'
+import { buildDashboardMetrics } from '../utils/dashboardStats'
 import { formatDashboardDate, getFirstName } from '../utils/userDisplay'
 
-const { user, loading } = useRequireAuth()
+const { user, loading: authLoading } = useRequireAuth()
 
 const displayName = computed(() => user.value?.name ?? '')
 const firstName = computed(() => getFirstName(displayName.value))
 const dateLine = computed(() => formatDashboardDate())
 
-const recentNotices = [
-  {
-    id: 1,
-    tone: 'wine',
-    text: 'Mudança de sala: Banco de Dados agora é na sala 202A (antes 300B)',
+const dashboardLoading = ref(false)
+const turmasCount = ref(null)
+const metrics = ref({
+  avisosToday: 0,
+  studentsNotifiedToday: 0,
+  roomChangesThisWeek: 0,
+})
+const recentNotices = ref([])
+
+const pageLoading = computed(() => authLoading.value || dashboardLoading.value)
+
+const turmasCountDisplay = computed(() => {
+  if (dashboardLoading.value) return '…'
+  if (turmasCount.value == null) return '-'
+  return turmasCount.value
+})
+
+function statDisplay(value) {
+  if (dashboardLoading.value) return '…'
+  if (value == null) return '-'
+  return value
+}
+
+async function loadDashboard() {
+  dashboardLoading.value = true
+  try {
+    const [turmas, avisos] = await Promise.all([fetchTurmas(), fetchAllAvisos()])
+    const turmasById = new Map(turmas.map((turma) => [turma.id, turma]))
+    turmasCount.value = turmas.length
+    const built = buildDashboardMetrics(avisos, turmasById)
+    metrics.value = {
+      avisosToday: built.avisosToday,
+      studentsNotifiedToday: built.studentsNotifiedToday,
+      roomChangesThisWeek: built.roomChangesThisWeek,
+    }
+    recentNotices.value = built.recentNotices
+  } catch {
+    turmasCount.value = null
+    metrics.value = {
+      avisosToday: null,
+      studentsNotifiedToday: null,
+      roomChangesThisWeek: null,
+    }
+    recentNotices.value = []
+  } finally {
+    dashboardLoading.value = false
+  }
+}
+
+watch(
+  () => authLoading.value,
+  (isAuthLoading) => {
+    if (!isAuthLoading) {
+      loadDashboard()
+    }
   },
-  {
-    id: 2,
-    tone: 'amber',
-    text: 'Não haverá aula de Estrutura de Dados hoje',
-  },
-  {
-    id: 3,
-    tone: 'teal',
-    text: 'Aviso geral enviado para Engenharia de Software',
-  },
-]
+  { immediate: true },
+)
 </script>
 
 <style scoped>

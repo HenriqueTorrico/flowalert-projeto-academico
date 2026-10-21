@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, toRef, watch } from 'vue'
 import { useSimulatedLoad } from '../../composables/useSimulatedLoad'
-import { getTurmaJoinUrl, getTurmaQrImageUrl } from '../../utils/turmaQr'
+import { buildTurmaQrWhatsAppShareMessage, getTurmaJoinUrl, getTurmaQrImageUrl } from '../../utils/turmaQr'
+import { whatsappShareHref } from '../../utils/whatsapp'
 import AppModal from '../ui/AppModal.vue'
 import AppSkeleton from '../ui/AppSkeleton.vue'
 
@@ -25,6 +26,14 @@ watch(
 
 const qrUrl = computed(() => (props.turma ? getTurmaQrImageUrl(props.turma.id) : ''))
 const joinUrl = computed(() => (props.turma ? getTurmaJoinUrl(props.turma.id) : ''))
+
+const whatsappShareUrl = computed(() => {
+  if (!props.turma || !joinUrl.value) return ''
+  const message = buildTurmaQrWhatsAppShareMessage(props.turma, joinUrl.value)
+  return whatsappShareHref(message)
+})
+
+const canShareWhatsApp = computed(() => Boolean(whatsappShareUrl.value) && !isLoading.value)
 
 const showContentSkeleton = computed(() => isLoading.value || (props.turma && !qrImageReady.value))
 
@@ -66,13 +75,41 @@ function onClose() {
           width="240"
           height="240"
         />
-        <p class="qr-dialog__hint">Os alunos podem escanear para entrar na turma.</p>
+        <p class="qr-dialog__hint">
+          Atalho para o aluno entrar sozinho. Para cadastro manual, use <strong>Visualizar</strong> na turma.
+        </p>
         <p class="qr-dialog__link">{{ joinUrl }}</p>
       </template>
     </div>
 
     <template #footer>
-      <button type="button" class="btn-accent-sm" @click="onClose">Fechar</button>
+      <div class="qr-dialog__footer">
+        <button type="button" class="btn-outline" @click="onClose">Fechar</button>
+        <a
+          class="btn-whatsapp"
+          :class="{ 'btn-whatsapp--disabled': !canShareWhatsApp }"
+          :href="canShareWhatsApp ? whatsappShareUrl : undefined"
+          :aria-disabled="!canShareWhatsApp"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3a8 8 0 0 0-6.93 12.04L4 21l6.08-1.58A8 8 0 1 0 12 3Z"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M9.2 10.2c.2-.55.85-.9 1.2-.85.35.05.75.55 1 .75.2.15.15.55-.05.75-.15.15-.3.35-.15.55.3.45 1.05 1.05 1.55 1.2.25.1.55 0 .7-.2.2-.25.45-.55.7-.45.6.25 1.15.55 1.55.95"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+            />
+          </svg>
+          Compartilhar no WhatsApp
+        </a>
+      </div>
     </template>
   </AppModal>
 </template>
@@ -124,5 +161,14 @@ function onClose() {
   line-height: 1.4;
   color: #9a958d;
   word-break: break-all;
+}
+
+.qr-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
 }
 </style>

@@ -8,7 +8,7 @@ defineProps({
 
 const emit = defineEmits(['close'])
 
-function onBackdropClick() {
+function close() {
   emit('close')
 }
 </script>
@@ -17,7 +17,7 @@ function onBackdropClick() {
   <Teleport to="body">
     <Transition name="modal-overlay">
       <div v-if="open" class="modal-root">
-        <button type="button" class="modal-backdrop" aria-label="Fechar" @click="onBackdropClick" />
+        <button type="button" class="modal-backdrop" aria-label="Fechar" @click="close" />
         <div
           class="modal-panel"
           role="dialog"
@@ -27,7 +27,19 @@ function onBackdropClick() {
           @click.stop
         >
           <header class="modal-panel__header">
-            <h2 id="modal-title" class="modal-panel__title">{{ title }}</h2>
+            <div class="modal-panel__header-row">
+              <h2 id="modal-title" class="modal-panel__title">{{ title }}</h2>
+              <button type="button" class="modal-panel__close" aria-label="Fechar" @click="close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M6 6l12 12M18 6 6 18"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
             <p v-if="description" class="modal-panel__description">{{ description }}</p>
           </header>
 
@@ -74,6 +86,42 @@ function onBackdropClick() {
 
 .modal-panel__header {
   margin-bottom: 1.25rem;
+}
+
+.modal-panel__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.modal-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: -0.15rem -0.35rem 0 0;
+  padding: 0;
+  color: #7a7772;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.modal-panel__close:hover {
+  color: #2a2a2a;
+  background: #f3f2f0;
+}
+
+.modal-panel__close:focus-visible {
+  outline: 2px solid rgba(240, 168, 48, 0.55);
+  outline-offset: 2px;
 }
 
 .modal-panel__title {

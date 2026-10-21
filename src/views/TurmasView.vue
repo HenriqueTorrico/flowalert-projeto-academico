@@ -1,65 +1,51 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import DashboardSidebar from '../components/dashboard/DashboardSidebar.vue'
 import DashboardTopbar from '../components/dashboard/DashboardTopbar.vue'
 import CreateTurmaDialog from '../components/turmas/CreateTurmaDialog.vue'
 import TurmaQrDialog from '../components/turmas/TurmaQrDialog.vue'
 import TurmaStudentsAside from '../components/turmas/TurmaStudentsAside.vue'
+import TurmaNoticesAside from '../components/turmas/TurmaNoticesAside.vue'
+import NoticeListItem from '../components/turmas/NoticeListItem.vue'
 import SendNoticeDialog from '../components/turmas/SendNoticeDialog.vue'
-import { buildSentNoticeRecord } from '../utils/noticePreview'
+import TurmaChannelBadges from '../components/turmas/TurmaChannelBadges.vue'
+import EditTurmaDialog from '../components/turmas/EditTurmaDialog.vue'
+import AppDropdownMenu from '../components/ui/AppDropdownMenu.vue'
+import { formatNoticeSentAt } from '../utils/noticePreview'
 import { useRequireAuth } from '../composables/useRequireAuth'
 import { useToast } from '../composables/useToast'
+import { fetchAllAvisos } from '../services/avisos'
+import { fetchTurmas } from '../services/turmas'
+import { avisoDisplayDetail } from '../utils/avisoDisplay'
+import {
+  countTurmasByYear,
+  filterTurmasByYear,
+  getLastTurmaYearOptions,
+} from '../utils/turmaYearFilter'
 
 const { user, loading } = useRequireAuth()
 const toast = useToast()
 
 const displayName = computed(() => user.value?.name ?? '')
+const hasTurmas = computed(() => classes.value.length > 0)
 
-const accentCycle = ['orange', 'green', 'purple']
-let nextTurmaId = 4
+const yearFilter = ref('all')
+const yearFilterOptions = computed(() => getLastTurmaYearOptions(5))
 
-const classes = ref([
-  {
-    id: 1,
-    accent: 'orange',
-    icon: 'database',
-    name: 'Banco de Dados - A',
-    meta: 'Sala 300B · Manhã',
-  },
-  {
-    id: 2,
-    accent: 'green',
-    icon: 'list',
-    name: 'Estrutura de Dados',
-    meta: 'Sala 105 · Tarde',
-  },
-  {
-    id: 3,
-    accent: 'purple',
-    icon: 'cube',
-    name: 'Engenharia de Software',
-    meta: 'Lab 02 · Manhã',
-  },
-])
+const filteredClasses = computed(() => filterTurmasByYear(classes.value, yearFilter.value))
 
-let nextNoticeId = 3
+const hasFilteredTurmas = computed(() => filteredClasses.value.length > 0)
 
-const sentNotices = ref([
-  {
-    id: 1,
-    tone: 'wine',
-    icon: 'arrow',
-    title: 'Mudança de sala',
-    text: 'Banco de Dados - A: aula agora na sala 202A (antes 300B)',
-  },
-  {
-    id: 2,
-    tone: 'amber',
-    icon: 'x',
-    title: 'Sem aula',
-    text: 'Estrutura de Dados: não haverá aula hoje',
-  },
-])
+const yearFilterEmptyMessage = computed(() => {
+  if (yearFilter.value === 'all') return ''
+  return `Nenhuma turma cadastrada em ${yearFilter.value}.`
+})
+
+const classes = ref([])
+const turmasLoading = ref(false)
+
+const sentNotices = ref([])
+const avisosLoading = ref(false)
 
 const showCreateDialog = ref(false)
 const createDialogKey = ref(0)
@@ -70,6 +56,11 @@ const selectedTurma = ref(null)
 const showNoticeDialog = ref(false)
 const noticeDialogKey = ref(0)
 const noticeInitialTurmaId = ref(null)
+const showEditDialog = ref(false)
+const editTurma = ref(null)
+const editDialogKey = ref(0)
+const showNoticesAside = ref(false)
+const noticesTurma = ref(null)
 
 function openCreateDialog() {
   showCreateDialog.value = true
@@ -85,6 +76,16 @@ function openQrDialog(turma) {
   showQrDialog.value = true
 }
 
+function openEditDialog(turma) {
+  editTurma.value = turma
+  showEditDialog.value = true
+}
+
+function closeEditDialog() {
+  showEditDialog.value = false
+  editDialogKey.value += 1
+}
+
 function closeQrDialog() {
   showQrDialog.value = false
 }
@@ -98,6 +99,15 @@ function closeStudentsAside() {
   showStudentsAside.value = false
 }
 
+function openNoticesAside(turma) {
+  noticesTurma.value = turma
+  showNoticesAside.value = true
+}
+
+function closeNoticesAside() {
+  showNoticesAside.value = false
+}
+
 function openNoticeDialog(turma = null) {
   noticeInitialTurmaId.value = turma?.id ?? null
   showNoticeDialog.value = true
@@ -109,24 +119,26 @@ function closeNoticeDialog() {
   noticeDialogKey.value += 1
 }
 
-function onNoticeSent(payload) {
-  const record = buildSentNoticeRecord({
-    scenario: payload.scenario,
-    turmaName: payload.turma?.name,
-    currentRoom: payload.currentRoom,
-    newRoom: payload.newRoom,
-    date: payload.date,
-    message: payload.message,
-  })
+function prependNotice(aviso) {
+  if (!aviso?.id) return
+  const exists = sentNotices.value.some((item) => item.id === aviso.id)
+  if (!exists) {
+    sentNotices.value = [enrichAvisoWithTurma(aviso), ...sentNotices.value]
+  }
+}
 
-  sentNotices.value.unshift({
-    id: nextNoticeId++,
-    ...record,
-  })
+function onNoticeSent(payload) {
+  if (payload?.aviso) {
+    prependNotice(payload.aviso)
+  }
 
   showNoticeDialog.value = false
   noticeDialogKey.value += 1
   toast.success('Aviso enviado com sucesso')
+}
+
+function onNoticeSentFromAside(aviso) {
+  prependNotice(aviso)
 }
 
 function onFormValidationError(message) {
@@ -137,22 +149,96 @@ function onNoticeError() {
   onFormValidationError('Revise os campos antes de enviar o aviso.')
 }
 
-function onTurmaCreateError() {
-  onFormValidationError('Revise os campos antes de criar a turma.')
+async function loadTurmas() {
+  turmasLoading.value = true
+  try {
+    classes.value = await fetchTurmas()
+  } catch {
+    toast.error('Turmas', 'Não foi possível carregar suas turmas.')
+  } finally {
+    turmasLoading.value = false
+  }
 }
 
-function onTurmaCreated(values) {
-  const id = nextTurmaId++
-  const accent = accentCycle[id % accentCycle.length]
-  const turma = {
-    id,
-    accent,
-    icon: 'list',
-    name: values.name,
-    meta: `${values.room} · ${values.period}`,
+function enrichAvisoWithTurma(aviso) {
+  const turma = classes.value.find((item) => item.id === aviso.turmaId)
+  if (!turma) return aviso
+
+  const turmaName = aviso.turmaName || turma.name
+  const turmaMeta = aviso.turmaMeta || turma.meta
+  const channels = aviso.channels ?? turma.channels
+  const detail = aviso.detail || avisoDisplayDetail({ ...aviso, turmaName })
+
+  return {
+    ...aviso,
+    turmaName,
+    turmaMeta,
+    channels,
+    detail,
+  }
+}
+
+async function loadAvisos() {
+  avisosLoading.value = true
+  try {
+    const avisos = await fetchAllAvisos()
+    sentNotices.value = avisos.map(enrichAvisoWithTurma)
+  } catch {
+    sentNotices.value = []
+  } finally {
+    avisosLoading.value = false
+  }
+}
+
+watch(
+  () => loading.value,
+  async (isAuthLoading) => {
+    if (!isAuthLoading) {
+      await loadTurmas()
+      await loadAvisos()
+    }
+  },
+  { immediate: true },
+)
+
+function onTurmaUpdated(turma) {
+  if (!turma?.id) return
+
+  const index = classes.value.findIndex((item) => item.id === turma.id)
+  if (index >= 0) {
+    classes.value[index] = turma
   }
 
-  classes.value.unshift(turma)
+  if (selectedTurma.value?.id === turma.id) {
+    selectedTurma.value = turma
+  }
+  if (qrTurma.value?.id === turma.id) {
+    qrTurma.value = turma
+  }
+  if (noticesTurma.value?.id === turma.id) {
+    noticesTurma.value = turma
+  }
+
+  showEditDialog.value = false
+  editDialogKey.value += 1
+  toast.success('Turma atualizada com sucesso')
+}
+
+function onTurmaCreated(turma) {
+  if (!turma?.id) {
+    toast.error('Turmas', 'A turma foi criada, mas a resposta da API está incompleta.')
+    return
+  }
+
+  const exists = classes.value.some((item) => item.id === turma.id)
+  if (!exists) {
+    classes.value.unshift(turma)
+  }
+
+  if (turma.year != null) {
+    yearFilter.value = turma.year
+  }
+
   showCreateDialog.value = false
   createDialogKey.value += 1
   toast.success('Turma criada com sucesso')
@@ -162,14 +248,15 @@ function onTurmaCreated(values) {
 
 <template>
   <div class="dashboard-shell">
-    <DashboardSidebar :user-name="displayName" active-nav="turmas" />
+    <DashboardSidebar active-nav="turmas" />
 
-    <div class="dashboard-main">
+    <div class="dashboard-main dashboard-main--turmas">
       <DashboardTopbar :user-name="displayName" search-placeholder="Buscar turma" />
 
-      <p v-if="loading" class="dashboard-loading">Carregando…</p>
+      <p v-if="loading || turmasLoading" class="dashboard-loading">Carregando…</p>
 
-      <main v-else class="dashboard-content">
+      <main v-else class="dashboard-content turmas-page">
+        <div class="turmas-page__top">
         <header class="turmas-page-header">
           <div>
             <h1 class="turmas-page-header__title">Minhas turmas</h1>
@@ -177,7 +264,13 @@ function onTurmaCreated(values) {
           </div>
           <div class="turmas-page-header__actions">
             <button type="button" class="btn-outline" @click="openCreateDialog">+ Criar turma</button>
-            <button type="button" class="btn-accent-sm" @click="openNoticeDialog()">
+            <button
+              type="button"
+              class="btn-accent-sm"
+              :disabled="!hasTurmas"
+              :title="hasTurmas ? undefined : 'Crie uma turma antes de enviar avisos'"
+              @click="openNoticeDialog()"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M15 17H9l-1 2h8l-1-2ZM5 9a7 7 0 0 1 14 0c0 5 2 6 2 6H3s2-1 2-6Z" stroke="currentColor"
                   stroke-width="1.6" stroke-linejoin="round" />
@@ -187,8 +280,68 @@ function onTurmaCreated(values) {
           </div>
         </header>
 
-        <section class="class-grid" aria-label="Turmas cadastradas">
-          <article v-for="turma in classes" :key="turma.id" class="class-card" :class="`class-card--${turma.accent}`">
+        <section
+          v-if="hasTurmas"
+          class="turmas-year-filters"
+          aria-label="Filtrar turmas por ano de cadastro"
+        >
+          <span class="turmas-year-filters__label">Ano do cadastro</span>
+          <div class="turmas-year-filters__pills" role="group" aria-label="Ano do cadastro">
+            <button
+              type="button"
+              class="turmas-year-filters__pill"
+              :class="{ 'turmas-year-filters__pill--active': yearFilter === 'all' }"
+              @click="yearFilter = 'all'"
+            >
+              Todas
+              <span class="turmas-year-filters__count">{{ classes.length }}</span>
+            </button>
+            <button
+              v-for="year in yearFilterOptions"
+              :key="year"
+              type="button"
+              class="turmas-year-filters__pill"
+              :class="{ 'turmas-year-filters__pill--active': yearFilter === year }"
+              @click="yearFilter = year"
+            >
+              {{ year }}
+              <span class="turmas-year-filters__count">{{ countTurmasByYear(classes, year) }}</span>
+            </button>
+          </div>
+        </section>
+
+        <section
+          v-if="!hasTurmas"
+          class="turmas-empty"
+          aria-label="Nenhuma turma cadastrada"
+        >
+          <p class="turmas-empty__title">Você ainda não tem turmas</p>
+          <p class="turmas-empty__text">
+            Crie sua primeira turma para compartilhar o QR Code com os alunos e enviar avisos.
+          </p>
+          <button type="button" class="btn-accent-sm" @click="openCreateDialog">
+            + Criar primeira turma
+          </button>
+        </section>
+
+        <section
+          v-else-if="!hasFilteredTurmas"
+          class="turmas-filter-empty"
+          aria-live="polite"
+        >
+          <p class="turmas-filter-empty__text">{{ yearFilterEmptyMessage }}</p>
+          <button type="button" class="btn-outline" @click="yearFilter = 'all'">
+            Ver todas as turmas
+          </button>
+        </section>
+
+        <section v-else class="class-grid" aria-label="Turmas cadastradas">
+          <article
+            v-for="turma in filteredClasses"
+            :key="turma.id"
+            class="class-card"
+            :class="`class-card--${turma.accent}`"
+          >
             <div class="class-card__head">
               <span class="class-card__icon" aria-hidden="true">
                 <svg v-if="turma.icon === 'database'" width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -205,55 +358,86 @@ function onTurmaCreated(values) {
                     stroke-linejoin="round" />
                 </svg>
               </span>
-              <button type="button" class="class-card__share" aria-label="Compartilhar QR Code da turma"
-                @click="openQrDialog(turma)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M8.5 12.5 12 9l3.5 3.5M12 15V9M6 18h12a2 2 0 0 0 2-2v-3M6 6h12a2 2 0 0 1 2 2v3"
-                    stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </button>
+              <div class="class-card__menu">
+                <AppDropdownMenu label="Opções da turma">
+                  <button type="button" class="app-dropdown__item" @click="openEditDialog(turma)">
+                    Editar configurações
+                  </button>
+                  <button type="button" class="app-dropdown__item" @click="openQrDialog(turma)">
+                    Compartilhar QR Code
+                  </button>
+                </AppDropdownMenu>
+              </div>
             </div>
             <h2 class="class-card__name">{{ turma.name }}</h2>
             <p class="class-card__meta">{{ turma.meta }}</p>
+            <TurmaChannelBadges class="class-card__channels" :channels="turma.channels" />
             <div class="class-card__actions">
               <button type="button" class="class-card__action" @click="openStudentsAside(turma)">
-                Visualizar
+                Alunos
               </button>
-              <button type="button" class="class-card__action class-card__action--primary"
-                @click="openNoticeDialog(turma)">
+              <button
+                type="button"
+                class="class-card__action class-card__action--primary"
+                @click="openNoticesAside(turma)"
+              >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M15 17H9l-1 2h8l-1-2ZM5 9a7 7 0 0 1 14 0c0 5 2 6 2 6H3s2-1 2-6Z" stroke="currentColor"
                     stroke-width="1.6" stroke-linejoin="round" />
                 </svg>
-                Enviar aviso
+                Avisos
               </button>
             </div>
           </article>
         </section>
+        </div>
 
-        <section class="sent-panel" aria-labelledby="sent-title">
-          <h2 id="sent-title" class="sent-panel__title">Avisos enviados</h2>
-          <ul class="sent-list">
-            <li v-for="item in sentNotices" :key="item.id" class="sent-list__item">
-              <span class="sent-list__icon" :class="`sent-list__icon--${item.tone}`" aria-hidden="true">
-                <template v-if="item.icon === 'arrow'">↰</template>
-                <template v-else-if="item.icon === 'bell'">!</template>
-                <template v-else>×</template>
-              </span>
-              <div class="sent-list__body">
-                <p class="sent-list__title">{{ item.title }}</p>
-                <p class="sent-list__text">{{ item.text }}</p>
-              </div>
-            </li>
-          </ul>
+        <section v-if="sentNotices.length" class="sent-panel" aria-labelledby="sent-title">
+          <h2 id="sent-title" class="sent-panel__title">Todos os avisos enviados</h2>
+          <div class="sent-panel__scroll">
+            <ul class="sent-list">
+              <NoticeListItem
+                v-for="item in sentNotices"
+                :key="item.id"
+                :tone="item.tone"
+                :icon="item.icon"
+                :title="item.title"
+                :text="item.text"
+                :detail="item.detail"
+                :turma-name="item.turmaName"
+                :turma-meta="item.turmaMeta"
+                :channels="item.channels"
+                show-turma
+                show-channels
+                :sent-at="formatNoticeSentAt(item.sentAt)"
+              />
+            </ul>
+          </div>
         </section>
       </main>
     </div>
 
-    <CreateTurmaDialog :key="createDialogKey" :open="showCreateDialog" @close="closeCreateDialog"
-      @created="onTurmaCreated" @error="onTurmaCreateError" />
+    <CreateTurmaDialog
+      :key="createDialogKey"
+      :open="showCreateDialog"
+      @close="closeCreateDialog"
+      @created="onTurmaCreated"
+    />
+    <EditTurmaDialog
+      :key="editDialogKey"
+      :open="showEditDialog"
+      :turma="editTurma"
+      @close="closeEditDialog"
+      @updated="onTurmaUpdated"
+    />
     <TurmaQrDialog :open="showQrDialog" :turma="qrTurma" @close="closeQrDialog" />
     <TurmaStudentsAside :open="showStudentsAside" :turma="selectedTurma" @close="closeStudentsAside" />
+    <TurmaNoticesAside
+      :open="showNoticesAside"
+      :turma="noticesTurma"
+      @close="closeNoticesAside"
+      @sent="onNoticeSentFromAside"
+    />
     <SendNoticeDialog :key="noticeDialogKey" :open="showNoticeDialog" :turmas="classes"
       :initial-turma-id="noticeInitialTurmaId" @close="closeNoticeDialog" @sent="onNoticeSent" @error="onNoticeError" />
   </div>

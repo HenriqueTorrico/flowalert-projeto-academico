@@ -1,6 +1,7 @@
 <script setup>
 defineProps({
   notifications: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false },
 })
 </script>
 
@@ -11,7 +12,9 @@ defineProps({
       <p class="notify-popover__lead">Avisos enviados às suas turmas</p>
     </header>
 
-    <ul v-if="notifications.length" class="notify-popover__list">
+    <p v-if="loading" class="notify-popover__empty">Carregando avisos…</p>
+
+    <ul v-else-if="notifications.length" class="notify-popover__list">
       <li
         v-for="item in notifications"
         :key="item.id"

@@ -37,22 +37,25 @@
       </RouterLink>
     </nav>
 
-    <RouterLink :to="{ name: 'logout' }" class="sidebar__profile" title="Sair da conta">
-      <span class="sidebar__avatar sidebar__avatar--teal">{{ getInitials(userName) }}</span>
-      <div class="sidebar__profile-text">
-        <span class="sidebar__profile-name">{{ userName }}</span>
-        <span class="sidebar__profile-role">{{ userRole }}</span>
-      </div>
-    </RouterLink>
+    <div class="sidebar__footer">
+      <RouterLink :to="{ name: 'logout' }" class="sidebar__logout">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Sair
+      </RouterLink>
+    </div>
   </aside>
 </template>
 
 <script setup>
-import { getInitials } from '../../utils/userDisplay'
-
 defineProps({
-  userName: { type: String, default: '' },
-  userRole: { type: String, default: 'Professor(a)' },
   activeNav: { type: String, default: 'home' },
 })
 
@@ -67,13 +70,16 @@ const navItems = [
 .sidebar {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  align-self: stretch;
   width: 16.5rem;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  max-height: 100dvh;
   padding: 1.35rem 0.85rem 1.25rem;
   background: #1a2338;
   color: rgba(255, 255, 255, 0.88);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .sidebar__brand {
@@ -130,57 +136,35 @@ const navItems = [
   opacity: 0.9;
 }
 
-.sidebar__profile {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.85rem 0.5rem 0;
+.sidebar__footer {
   margin-top: auto;
+  padding-top: 0.85rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  text-decoration: none;
-  color: inherit;
-  border-radius: 8px;
-  transition: background-color 0.25s ease;
 }
 
-.sidebar__profile:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.sidebar__avatar {
+.sidebar__logout {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.sidebar__avatar--teal {
-  background: #4d8a7c;
-}
-
-.sidebar__profile-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.sidebar__profile-name {
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
 }
 
-.sidebar__profile-role {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.55);
+.sidebar__logout:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 </style>

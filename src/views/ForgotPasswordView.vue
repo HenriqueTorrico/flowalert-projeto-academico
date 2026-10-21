@@ -20,7 +20,14 @@
                         <p v-if="showError('email')" class="field__error" role="alert">{{ errors.email }}</p>
                     </div>
 
-                    <button type="submit" class="btn-primary">Enviar link</button>
+                    <AppActionButton
+                        type="submit"
+                        variant="primary"
+                        :loading="submitting"
+                        loading-label="Enviando…"
+                    >
+                        Enviar link
+                    </AppActionButton>
                 </form>
 
                 <p class="form-panel__footer">
@@ -35,9 +42,13 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import AuthHeroPanel from '../components/auth/AuthHeroPanel.vue'
+import AppActionButton from '../components/ui/AppActionButton.vue'
 import { useAuthForm } from '../composables/useAuthForm'
 import { forgotPasswordSchema } from '../schemas/forgotPasswordSchema'
+
+const submitting = ref(false)
 
 const { defineAuthField, handleSubmit, errors, submitCount } = useAuthForm({
     validationSchema: forgotPasswordSchema,
@@ -48,8 +59,23 @@ const { defineAuthField, handleSubmit, errors, submitCount } = useAuthForm({
 
 const [email, emailAttrs] = defineAuthField('email')
 
-const onSubmit = handleSubmit(() => {
+const runSubmit = handleSubmit(async (values) => {
+    submitting.value = true
+    try {
+        const base = import.meta.env.VITE_API_URL ?? ''
+        await fetch(`${base}/api/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: values.email }),
+        })
+    } finally {
+        submitting.value = false
+    }
 })
+
+function onSubmit() {
+    runSubmit()
+}
 
 function showError(field) {
     return submitCount.value > 0 && errors.value[field]

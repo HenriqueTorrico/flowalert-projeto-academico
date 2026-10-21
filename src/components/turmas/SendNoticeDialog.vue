@@ -1,8 +1,12 @@
 <script setup>
-import { computed, toRef, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
+import AppActionButton from '../ui/AppActionButton.vue'
 import { useAuthForm } from '../../composables/useAuthForm'
 import { useSimulatedLoad } from '../../composables/useSimulatedLoad'
 import { NOTICE_SCENARIOS, sendNoticeSchema } from '../../schemas/sendNoticeSchema'
+import { useToast } from '../../composables/useToast'
+import { createAviso } from '../../services/avisos'
+import { getTodayIsoDate } from '../../utils/dateInput'
 import { buildNoticePreview } from '../../utils/noticePreview'
 import { parseRoomFromTurmaMeta } from '../../utils/turmaMeta'
 import AppModal from '../ui/AppModal.vue'
@@ -13,11 +17,14 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   turmas: { type: Array, default: () => [] },
   initialTurmaId: { type: [Number, String], default: null },
+  lockTurma: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close', 'sent', 'error'])
 
+const toast = useToast()
 const { isLoading } = useSimulatedLoad(toRef(props, 'open'))
+const submitting = ref(false)
 
 const turmaOptions = computed(() =>
   props.turmas.map((turma) => ({
@@ -26,17 +33,18 @@ const turmaOptions = computed(() =>
   })),
 )
 
-const { defineAuthField, handleSubmit, errors, submitCount, setFieldValue } = useAuthForm({
-  validationSchema: sendNoticeSchema,
-  initialValues: {
-    turmaId: '',
-    scenario: 'room_change',
-    currentRoom: '',
-    newRoom: '',
-    date: '',
-    message: '',
-  },
-})
+const { defineAuthField, handleSubmit, errors, submitCount, setFieldValue, setFieldError, resetForm } =
+  useAuthForm({
+    validationSchema: sendNoticeSchema,
+    initialValues: {
+      turmaId: '',
+      scenario: 'room_change',
+      currentRoom: '',
+      newRoom: '',
+      date: getTodayIsoDate(),
+      message: '',
+    },
+  })
 
 const [turmaId, turmaIdAttrs] = defineAuthField('turmaId')
 const [scenario] = defineAuthField('scenario')
@@ -60,21 +68,36 @@ const preview = computed(() =>
   }),
 )
 
+function resetNoticeForm() {
+  const fallbackId = props.initialTurmaId ?? props.turmas[0]?.id
+  resetForm({
+    values: {
+      turmaId: fallbackId != null ? String(fallbackId) : '',
+      scenario: 'room_change',
+      currentRoom: '',
+      newRoom: '',
+      date: getTodayIsoDate(),
+      message: '',
+    },
+  })
+}
+
 watch(
-  () => [props.open, props.initialTurmaId, props.turmas],
-  ([isOpen]) => {
+  () => props.open,
+  (isOpen) => {
     if (!isOpen) return
-    const fallbackId = props.initialTurmaId ?? props.turmas[0]?.id
-    if (fallbackId != null) {
-      setFieldValue('turmaId', String(fallbackId))
-    }
+    resetNoticeForm()
   },
-  { immediate: true },
 )
 
 watch(
-  () => [turmaId.value, selectedTurma.value?.meta],
+  () => [turmaId.value, selectedTurma.value?.meta, selectedTurma.value?.room],
   () => {
+    const room = selectedTurma.value?.room
+    if (room) {
+      setFieldValue('currentRoom', room)
+      return
+    }
     const meta = selectedTurma.value?.meta
     if (meta) {
       setFieldValue('currentRoom', parseRoomFromTurmaMeta(meta))
@@ -84,23 +107,64 @@ watch(
 
 function setScenario(next) {
   setFieldValue('scenario', next)
+
+  if (next === 'room_change' || next === 'no_class') {
+    if (!date.value) {
+      setFieldValue('date', getTodayIsoDate())
+    }
+  }
+
+  if (next !== 'general' && next !== 'no_class') {
+    setFieldValue('message', '')
+  }
+}
+
+function applyApiFieldErrors(fields) {
+  if (!fields || typeof fields !== 'object') return
+  for (const [field, message] of Object.entries(fields)) {
+    if (message) {
+      setFieldError(field, String(message))
+    }
+  }
 }
 
 function showError(field) {
   return submitCount.value > 0 && errors.value[field]
 }
 
-const onSubmit = handleSubmit(
-  (formValues) => {
-    emit('sent', {
-      ...formValues,
-      turma: selectedTurma.value,
-    })
+const runSubmit = handleSubmit(
+  async (formValues) => {
+    const turma = selectedTurma.value
+    if (!turma?.id) {
+      emit('error')
+      return
+    }
+
+    submitting.value = true
+    try {
+      const aviso = await createAviso(turma.id, formValues)
+      emit('sent', {
+        ...formValues,
+        turma,
+        aviso,
+      })
+    } catch (err) {
+      applyApiFieldErrors(err?.fields)
+      const message = err instanceof Error ? err.message : 'Não foi possível enviar o aviso.'
+      toast.error('Enviar aviso', message)
+      emit('error')
+    } finally {
+      submitting.value = false
+    }
   },
   () => {
     emit('error')
   },
 )
+
+function onSubmit() {
+  runSubmit()
+}
 
 function onClose() {
   emit('close')
@@ -123,7 +187,7 @@ function onClose() {
     </div>
 
     <form v-else id="send-notice-form" class="notice-form" @submit.prevent="onSubmit" novalidate>
-      <div class="field">
+      <div v-if="!lockTurma" class="field">
         <label class="field__label" for="notice-turma">Turma</label>
         <AppSelect
           id="notice-turma"
@@ -160,8 +224,10 @@ function onClose() {
             id="notice-current-room"
             v-model="currentRoom"
             v-bind="currentRoomAttrs"
-            class="field__input field__input--muted"
+            class="field__input field__input--muted field__input--readonly"
             type="text"
+            readonly
+            disabled
             :class="{ 'field__input--invalid': showError('currentRoom') }"
           />
           <p v-if="showError('currentRoom')" class="field__error">{{ errors.currentRoom }}</p>
@@ -208,6 +274,22 @@ function onClose() {
           />
           <p v-if="showError('date')" class="field__error">{{ errors.date }}</p>
         </div>
+
+        <div class="field">
+          <label class="field__label" for="notice-no-class-reason">
+            Motivo <span class="field__optional">(opcional)</span>
+          </label>
+          <textarea
+            id="notice-no-class-reason"
+            v-model="message"
+            v-bind="messageAttrs"
+            class="field__input field__textarea"
+            rows="3"
+            placeholder="Ex.: feriado, evento institucional, professor ausente"
+            :class="{ 'field__input--invalid': showError('message') }"
+          />
+          <p v-if="showError('message')" class="field__error">{{ errors.message }}</p>
+        </div>
       </template>
 
       <template v-else>
@@ -248,10 +330,19 @@ function onClose() {
     </form>
 
     <template #footer>
-      <button type="button" class="btn-outline" :disabled="isLoading" @click="onClose">Cancelar</button>
-      <button type="submit" form="send-notice-form" class="btn-accent-sm" :disabled="isLoading">
-        Enviar aviso
+      <button type="button" class="btn-outline" :disabled="isLoading || submitting" @click="onClose">
+        Cancelar
       </button>
+      <AppActionButton
+        type="submit"
+        form="send-notice-form"
+        variant="accent-sm"
+        :loading="submitting"
+        :disabled="isLoading"
+        loading-label="Enviando…"
+      >
+        Enviar aviso
+      </AppActionButton>
     </template>
   </AppModal>
 </template>
@@ -269,6 +360,12 @@ function onClose() {
   background: #f7f6f4;
 }
 
+.field__input--readonly:disabled {
+  color: #6f6c66;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .field__input--date {
   cursor: text;
 }
@@ -277,6 +374,11 @@ function onClose() {
   min-height: 5.5rem;
   resize: vertical;
   cursor: text;
+}
+
+.field__optional {
+  font-weight: 400;
+  color: #9a958d;
 }
 
 .notice-scenarios {

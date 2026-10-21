@@ -1,6 +1,8 @@
 const TOKEN_KEY = 'flowalert_token'
 const USER_KEY = 'flowalert_user'
 
+const GENERIC_ERROR = 'Ocorreu um erro. Tente novamente.'
+
 function apiUrl(path) {
   const base = import.meta.env.VITE_API_URL ?? ''
   return `${base}${path}`
@@ -31,16 +33,27 @@ export function clearSession() {
 }
 
 export async function login(email, password) {
-  const response = await fetch(apiUrl('/api/auth/login'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
+  let response
+  try {
+    response = await fetch(apiUrl('/api/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+  } catch {
+    throw new Error(GENERIC_ERROR)
+  }
 
   const data = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(data.error ?? 'Não foi possível entrar.')
+    const message =
+      response.status >= 500
+        ? GENERIC_ERROR
+        : typeof data.error === 'string'
+          ? data.error
+          : 'Não foi possível entrar.'
+    throw new Error(message)
   }
 
   setSession(data.token, data.user)
