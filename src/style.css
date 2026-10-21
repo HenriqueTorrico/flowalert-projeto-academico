@@ -1,3 +1,6 @@
+@import './styles/buttons.css';
+@import './styles/skeleton.css';
+
 :root {
   --font-serif: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
   --font-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
@@ -9,7 +12,8 @@
   --color-border-input: #e4e2de;
   --color-border-input-focus: #c9c5be;
   --color-accent-orange: #f0a830;
-  --color-accent-orange-hover: #e39b22;
+  --color-accent-orange-hover: #d99218;
+  --color-accent-orange-active: #c98512;
   --color-link: #3f6f66;
 
   font-family: var(--font-sans);
@@ -44,6 +48,21 @@ a {
 }
 
 button,
-input {
+input,
+textarea {
   font-family: inherit;
+}
+
+button,
+[type='button'],
+[type='submit'],
+[type='reset'],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+[type='button']:disabled,
+[type='submit']:disabled {
+  cursor: not-allowed;
 }

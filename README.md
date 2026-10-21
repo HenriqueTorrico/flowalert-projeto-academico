@@ -1,6 +1,6 @@
 # FlowAlert
 
-Aplicação web do projeto acadêmico FlowAlert — avisos para turmas sem depender de grupos de mensagens.
+Aplicação web do projeto acadêmico FlowAlert - avisos para turmas sem depender de grupos de mensagens.
 
 ## Stack
 
