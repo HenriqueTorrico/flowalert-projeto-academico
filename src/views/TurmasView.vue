@@ -393,7 +393,12 @@ function onTurmaCreated(turma) {
         </div>
 
         <section v-if="sentNotices.length" class="sent-panel" aria-labelledby="sent-title">
-          <h2 id="sent-title" class="sent-panel__title">Todos os avisos enviados</h2>
+          <div class="sent-panel__head">
+            <h2 id="sent-title" class="sent-panel__title">Todos os avisos enviados</h2>
+            <RouterLink :to="{ name: 'avisos' }" class="sent-panel__link">
+              Ver painel de avisos →
+            </RouterLink>
+          </div>
           <div class="sent-panel__scroll">
             <ul class="sent-list">
               <NoticeListItem

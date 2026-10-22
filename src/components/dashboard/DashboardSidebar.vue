@@ -62,7 +62,7 @@ defineProps({
 const navItems = [
   { id: 'home', label: 'Home', icon: 'home', to: { name: 'dashboard' } },
   { id: 'turmas', label: 'Turmas', icon: 'turmas', to: { name: 'turmas' } },
-  { id: 'avisos', label: 'Avisos', icon: 'avisos', to: { name: 'dashboard' } },
+  { id: 'avisos', label: 'Avisos', icon: 'avisos', to: { name: 'avisos' } },
 ]
 </script>
 

@@ -17,3 +17,7 @@ export async function fetchAllAvisos() {
   const data = await apiRequest('/api/avisos')
   return data.avisos ?? []
 }
+
+export async function fetchAvisoDetail(avisoId) {
+  return apiRequest(`/api/avisos/${avisoId}`)
+}

@@ -4,6 +4,7 @@ import LoginView from '../views/LoginView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import TurmasView from '../views/TurmasView.vue'
+import AvisosView from '../views/AvisosView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,6 +35,12 @@ const router = createRouter({
       path: '/turmas',
       name: 'turmas',
       component: TurmasView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/avisos',
+      name: 'avisos',
+      component: AvisosView,
       meta: { requiresAuth: true },
     },
     {
